@@ -119,26 +119,6 @@ impl Encode for BVLCFunction {
     }
 }
 
-/*impl Decode for BVLCFunction {
-    fn decode<T: std::io::Read + Sized>(reader: &mut T) -> std::io::Result<Self> {
-        let function = match reader.read_u8()? {
-            0x0b => {
-                let npdu = NPDU::decode(reader)?;
-                Ok(BVLCFunction::OriginalBroadcastNPDU(npdu))
-            }
-            0x0a => {
-                let npdu = NPDU::decode(reader)?;
-                Ok(BVLCFunction::OriginalUnicastNPDU(npdu))
-            }
-            t => Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("BVLC Function not supported: {}", t),
-            )),
-        };
-        function
-    }
-}*/
-
 /// A Struct containing a BACnet Virtual Link Control (Annex J).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BVLC<F = BVLCFunction> {
@@ -163,7 +143,7 @@ impl<F: Encode + AsU8> Encode for BVLC<F> {
     fn encode<T: std::io::Write + Sized>(&self, writer: &mut T) -> std::io::Result<()> {
         writer.write_u8(self.bvlc_type)?;
         writer.write_u8(self.function.as_u8())?;
-        writer.write_u16::<BigEndian>(self.function.len() as u16)?;
+        writer.write_u16::<BigEndian>(self.len() as u16)?;
         self.function.encode(writer)?;
         Ok(())
     }
@@ -222,6 +202,6 @@ mod tests {
 
         let mut w = BytesMut::new().writer();
         bvlc.encode(&mut w).expect("Write BVLC to buffer");
-        assert_eq!(w.into_inner().to_vec(), hex::decode("81000000").unwrap());
+        assert_eq!(w.into_inner().to_vec(), vec![129, 0, 0, 4]);
     }
 }

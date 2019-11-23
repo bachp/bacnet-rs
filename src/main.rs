@@ -27,10 +27,21 @@ fn main() {
 
         println!("Listening on {}", socket.local_addr().unwrap());
 
-        //let addr = format!("192.168.69.255:{}", 0xBAC0);
-        //let data = hex::decode("810b000c0120ffff00ff1008000000000000").unwrap(); // Who-is
-        //let sent = socket.send_to(&data[..], &addr).await.unwrap();
-        //println!("Sent {} bytes to {}", sent, addr);
+        let addr = format!("192.168.69.255:{}", 0xBAC0);
+        let data_ref = hex::decode("810b000c0120ffff00ff1008").unwrap(); // Who-is
+        let apdu = APDU::new(0x01, 0x08, vec![]);
+        trace!("APDU Len: {}", apdu.len());
+        let dest = Dest::new(0xffff, 0);
+        let npdu = NPDU::new(apdu, Some(dest), None, NPDUPriority::Normal);
+        let bvlc = BVLC::new(BVLCFunction::OriginalBroadcastNPDU(npdu));
+        let mut w = BytesMut::new().writer();
+        bvlc.encode(&mut w);
+        let data = w.into_inner();
+        println!("Who-Is: {:?}", bvlc);
+        println!("Send: {:02x?}", data.to_vec());
+        println!("Ref : {:02x?}", data_ref);
+        let sent = socket.send_to(&data, &addr).await.unwrap();
+        println!("Sent {} bytes to {}", sent, addr);
 
         loop {
             let (n, peer) = socket.recv_from(&mut buf).await.unwrap();
@@ -43,6 +54,32 @@ fn main() {
             trace!("Function: {:02x?}", b.function);
             trace!("Length: {:?}", b.len());
 
+            match b.function {
+                BVLCFunction::OriginalBroadcastNPDU(n) | BVLCFunction::OriginalUnicastNPDU(n) => {
+                    trace!("NPDU: {:02x?}", n);
+                    trace!("Version: {}", n.version);
+                    trace!("Priority: {:?}", n.priority);
+                    match n.content {
+                        NPDUContent::APDU(apdu) => {
+                            trace!("APDU: {:02x?}", apdu);
+                            match apdu.service_choice {
+                                08 => {
+                                    trace!("Who-Is received!");
+                                    //let apdu = APDU::new();
+                                    //let sent = socket.send_to().await.unwrap();
+                                }
+                                00 => {
+                                    trace!("I-Am received!");
+                                }
+                                _ => unimplemented!(),
+                            }
+                        }
+                        _ => unimplemented!(),
+                    }
+                }
+            }
+
+            /*
             // === Slice ===
             let data = &buf[..n];
             trace!("Slice Data: {:02x?}", data);
@@ -51,6 +88,7 @@ fn main() {
             trace!("Slice BVLC: {:02x?}", b);
             trace!("Slice Function: {:02x?}", b.function());
             trace!("Slice Length: {:?}", b.length());
+            */
         }
 
         /*loop {

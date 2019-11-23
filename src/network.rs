@@ -21,7 +21,12 @@ pub enum NPDUPriority {
 
 impl Into<u8> for NPDUPriority {
     fn into(self) -> u8 {
-        0b11 as u8
+        match self {
+            Self::LifeSafety => 0b11,
+            Self::CriticalEquipment => 0b10,
+            Self::Urgent => 0b01,
+            Self::Normal => 0b00,
+        }
     }
 }
 
@@ -295,12 +300,12 @@ impl<A: Encode, B: Encode> Encode for NPDUContent<A, B> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NPDU<A: Encode = APDU, B: Encode = NPDUMessage> {
     /// Protocol Version Number (6.2.1)
-    version: u8,
-    destination: Option<Dest>,
-    source: Option<Source>,
-    data_expecting_reply: bool,
-    priority: NPDUPriority,
-    content: NPDUContent<A, B>,
+    pub version: u8,
+    pub destination: Option<Dest>,
+    pub source: Option<Source>,
+    pub data_expecting_reply: bool,
+    pub priority: NPDUPriority,
+    pub content: NPDUContent<A, B>,
 }
 
 impl<A: Encode, B: Encode> NPDU<A, B> {
@@ -452,7 +457,7 @@ mod tests {
 
         let mut w = BytesMut::new().writer();
         npdu.encode(&mut w).expect("Write NPDU to buffer");
-        assert_eq!(w.into_inner().to_vec(), vec![1, 3]);
+        assert_eq!(w.into_inner().to_vec(), vec![1, 0]);
     }
 
     #[test]
@@ -469,7 +474,7 @@ mod tests {
         npdu.encode(&mut w).expect("Write NPDU to buffer");
         assert_eq!(
             w.into_inner().to_vec(),
-            vec![1, 35, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255]
+            vec![1, 32, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255]
         );
     }
 
@@ -486,7 +491,7 @@ mod tests {
         npdu.encode(&mut w).expect("Write NPDU to buffer");
         assert_eq!(
             w.into_inner().to_vec(),
-            vec![1, 11, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            vec![1, 8, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         );
     }
 
@@ -510,7 +515,7 @@ mod tests {
         assert_eq!(
             w.into_inner().to_vec(),
             vec![
-                1, 43, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 38, 16, 0, 0,
+                1, 40, 1, 38, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 38, 16, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255
             ]
         );
