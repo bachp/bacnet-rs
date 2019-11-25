@@ -1,130 +1,71 @@
 use crate::{Decode, Encode};
 
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
-use std::convert::TryFrom;
-
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::Write;
 
 pub mod service;
 pub use service::*;
 
 use tracing::trace;
 
+/// BACnetPDU variants (Chapter 21)
+///
+/// ```asn.1
+/// BACnetPDU ::= CHOICE {
+///     confirmed-request-pdu
+///     unconfirmed-request-pdu
+///     simple-ack-pdu
+///     complex-ack-pdu
+///     segment-ack-pdu
+///     error-pdu
+///     reject-pdu
+///     abort-pdu
+///     }
+/// ```
+///
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum BACnetPDUSlice<'a> {
-    ConfirmedRequest(ConfirmedRequestPDUSlice<'a>), // = 0x00; (2.1.2)
-    UnconfirmedRequest(UnconfirmedRequestPDUSlice<'a>), // = 0x01; (2.1.3)
-    SimpleACK,                                      // = 0x02; (2.1.4)
-    ComplexACK,                                     // = 0x03; (2.1.5)
-    SegmentACK,                                     // = 0x04; (2.1.6)
-    Error,                                          // = 0x05; (2.1.7)
-    Reject,                                         // = 0x06; (2.1.8)
-    Abort,                                          // = 0x07; (2.1.9)
+pub enum BACnetPDU {
+    ConfirmedRequest,   // = 0x00;
+    UnconfirmedRequest, // = 0x01;
+    SimpleACK,          // = 0x02;
+    ComplexACK,         // = 0x03;
+    SegmentACK,         // = 0x04;
+    Error,              // = 0x05;
+    Reject,             // = 0x06;
+    Abort,              // = 0x07;
 }
 
-impl<'a> BACnetPDUSlice<'a> {
-    pub fn from_slice(slice: &'a [u8]) -> Result<Self, String> {
-        let type_ = slice[0] >> 4;
-        trace!("PDU Slice: {:02x?}, Type: {}", slice, type_);
-        match type_ {
-            0x01 => Ok(Self::UnconfirmedRequest(
-                UnconfirmedRequestPDUSlice::from_slice(&slice[1..])?,
-            )),
-            _ => Err(format!("Unsupported PDU type: {}", type_)),
+impl BACnetPDU {
+    fn as_u8(&self) -> u8 {
+        match self {
+            Self::ConfirmedRequest => 0,
+            Self::UnconfirmedRequest => 1,
+            Self::SimpleACK => 2,
+            Self::ComplexACK => 3,
+            Self::SegmentACK => 4,
+            Self::Error => 5,
+            Self::Reject => 6,
+            Self::Abort => 7,
         }
     }
 }
 
+/// BACnet-Unconfirmed-Request-PDU struct (Chapter 21)
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConfirmedRequestPDUSlice<'a> {
-    slice: &'a [u8],
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct UnconfirmedRequestPDUSlice<'a> {
-    slice: &'a [u8],
-}
-
-impl<'a> UnconfirmedRequestPDUSlice<'a> {
-    ///Creates a slice containing an APDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<UnconfirmedRequestPDUSlice<'a>, String> {
-        // TODO: Add checks
-
-        Ok(UnconfirmedRequestPDUSlice { slice: &slice[..] })
-    }
-
-    ///Returns the slice containing the APDU
-    #[inline]
-    pub fn slice(&self) -> &'a [u8] {
-        self.slice
-    }
-
-    pub fn service(&self) -> Result<UnconfirmedService, String> {
-        UnconfirmedService::from_slice(self.slice)
-    }
-}
-
-/// A slice containing a Application layer Protocol Data Unit (6.2)
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct APDUSlice<'a> {
-    slice: &'a [u8],
-}
-
-impl<'a> APDUSlice<'a> {
-    ///Creates a slice containing an APDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<APDUSlice<'a>, String> {
-        // TODO: Add checks
-
-        Ok(APDUSlice { slice: &slice[..] })
-    }
-
-    ///Returns the slice containing the APDU
-    #[inline]
-    pub fn slice(&self) -> &'a [u8] {
-        self.slice
-    }
-
-    fn type_(&self) -> u8 {
-        println!("{:02x?}", self.slice);
-        self.slice[0] >> 4
-    }
-
-    pub fn content(&self) -> Result<BACnetPDUSlice, String> {
-        BACnetPDUSlice::from_slice(self.slice)
-    }
-
-    pub fn service_slice(&self) -> &'a [u8] {
-        &self.slice[2..]
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum APDUType {
-    ConfirmedRequest,   // = 0x00; (2.1.2)
-    UnconfirmedRequest, // = 0x01; (2.1.3)
-    SimpleACK,          // = 0x02; (2.1.4)
-    ComplexACK,         // = 0x03; (2.1.5)
-    SegmentACK,         // = 0x04; (2.1.6)
-    Error,              // = 0x05; (2.1.7)
-    Reject,             // = 0x06; (2.1.8)
-    Abort,              // = 0x07; (2.1.9)
-}
+pub struct BACnetUnconfirmedRequestPDU {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct APDU {
     apdu_type: u8,
     pub service_choice: u8,
-    content: Vec<u8>,
+    user_data: Vec<u8>,
 }
 
 impl APDU {
-    pub fn new(apdu_type: u8, service_choice: u8, content: Vec<u8>) -> Self {
+    pub fn new(apdu_type: u8, service_choice: u8, user_data: Vec<u8>) -> Self {
         Self {
             apdu_type,
             service_choice,
-            content,
+            user_data,
         }
     }
 }
@@ -133,7 +74,7 @@ impl Encode for APDU {
     fn encode<T: std::io::Write + Sized>(&self, writer: &mut T) -> std::io::Result<()> {
         writer.write_u8(self.apdu_type << 4)?;
         writer.write_u8(self.service_choice)?;
-        writer.write(&self.content)?;
+        writer.write(&self.user_data)?;
         Ok(())
     }
 
@@ -141,7 +82,7 @@ impl Encode for APDU {
         let mut l = 0;
         l += 1; // Type
         l += 1; // Service Choice
-        l += self.content.len(); // Content
+        l += self.user_data.len(); // Content
         l
     }
 }
@@ -199,7 +140,7 @@ mod tests {
         assert_eq!(apdu.apdu_type, 0x01);
         assert_eq!(apdu.service_choice, 0x00);
         assert_eq!(
-            apdu.content,
+            apdu.user_data,
             vec![196, 2, 0, 2, 87, 34, 4, 0, 145, 0, 33, 15]
         );
 

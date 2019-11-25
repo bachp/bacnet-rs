@@ -1,9 +1,12 @@
+use crate::{Decode, Encode};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Service {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum UnconfirmedService<'a> {
-    IAm(IAmSlice<'a>),                  // = 0;
+pub enum UnconfirmedService {
+    IAm(IAm),                           // = 0;
     IHave,                              // = 1;
     UnconfirmedCovNotification,         // = 2;
     UnconfirmedEventNotification,       // = 3;
@@ -17,31 +20,54 @@ pub enum UnconfirmedService<'a> {
     UnconfirmedCovNotificationMultiple, // = 11;
 }
 
-impl<'a> UnconfirmedService<'a> {
-    ///Creates a slice containing an APDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<UnconfirmedService, String> {
+impl Decode for UnconfirmedService {
+    fn decode<T: std::io::Read + Sized>(reader: &mut T) -> std::io::Result<Self> {
         // TODO: Add checks
-        let type_ = slice[0];
+        let type_ = reader.read_u8()?;
 
         match type_ {
-            0x00 => Ok(Self::IAm(IAmSlice::from_slice(&slice[1..]).unwrap())),
+            0x00 => Ok(Self::IAm(IAm::decode(reader)?)),
             0x08 => Ok(Self::WhoIs()),
-            t => Err(format!("Unknown Service type: {}", t)),
+            t => unimplemented!(),
         }
     }
 }
 
-/// A slice containing a Application layer Protocol Data Unit (6.2)
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct IAmSlice<'a> {
-    slice: &'a [u8],
+impl Encode for UnconfirmedService {
+    fn encode<T: std::io::Write + Sized>(&self, writer: &mut T) -> std::io::Result<()> {
+        match self {
+            Self::IAm(a) => a.encode(writer),
+            Self::WhoIs() => Ok(()),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Self::IAm(a) => a.len(),
+            Self::WhoIs() => 0,
+            _ => unimplemented!(),
+        }
+    }
 }
 
-impl<'a> IAmSlice<'a> {
-    ///Creates a slice containing an APDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<IAmSlice<'a>, String> {
-        // TODO: Add checks
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct IAm {}
 
-        Ok(IAmSlice { slice: &slice[..] })
+impl Decode for IAm {
+    fn decode<T: std::io::Read + Sized>(_reader: &mut T) -> std::io::Result<Self> {
+        Ok(Self {})
+    }
+}
+
+impl Encode for IAm {
+    fn encode<T: std::io::Write + Sized>(&self, writer: &mut T) -> std::io::Result<()> {
+        let data = vec![196, 2, 0, 2, 87, 34, 4, 0, 145, 0, 33, 15];
+        writer.write(&data)?;
+        Ok(())
+    }
+
+    fn len(&self) -> usize {
+        12
     }
 }

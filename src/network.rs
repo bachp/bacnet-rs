@@ -6,7 +6,6 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use std::convert::TryFrom;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::Write;
 
 use tracing::trace;
 
@@ -77,176 +76,24 @@ impl TryFrom<u8> for NPDUMessage {
 
 impl Encode for NPDUMessage {
     fn encode<T: std::io::Write + Sized>(&self, writer: &mut T) -> std::io::Result<()> {
-        Ok(())
+        unimplemented!();
     }
 
     fn len(&self) -> usize {
-        0
+        unimplemented!();
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DestSlice<'a> {
-    slice: &'a [u8],
-}
-
-impl<'a> DestSlice<'a> {
-    ///Creates a slice containing an NPDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<Self, String> {
-        // TODO: Add checks
-
-        Ok(Self { slice: &slice[..] })
-    }
-}
-
-impl<'a> DestSlice<'a> {
-    fn len(&self) -> usize {
-        3 + self.slice[2] as usize + 1
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SourceSlice<'a> {
-    slice: &'a [u8],
-}
-
-impl<'a> SourceSlice<'a> {
-    ///Creates a slice containing an NPDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<Self, String> {
-        // TODO: Add checks
-
-        Ok(Self { slice: &slice[..] })
-    }
-}
-
-impl<'a> SourceSlice<'a> {
-    fn len(&self) -> usize {
-        3 + self.slice[2] as usize + 1
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum NPDUContentSlice<'a> {
-    APDU(APDUSlice<'a>),
-    Message(NPDUMessage),
-}
-
-/// A slice containing a Network layer Protocol Data Unit (6.2)
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct NPDUSlice<'a> {
-    slice: &'a [u8],
-}
-
-impl<'a> TryFrom<&'a [u8]> for NPDUSlice<'a> {
-    type Error = String;
-
-    fn try_from(slice: &'a [u8]) -> Result<Self, Self::Error> {
-        Ok(Self { slice: &slice[..] })
-    }
-}
-
-impl<'a> NPDUSlice<'a> {
-    ///Creates a slice containing an NPDU.
-    pub fn from_slice(slice: &'a [u8]) -> Result<NPDUSlice<'a>, String> {
-        // TODO: Add checks
-
-        Ok(NPDUSlice { slice: &slice[..] })
-    }
-
-    ///Returns the slice containing the BACnet Virtual Link Control
-    #[inline]
-    pub fn slice(&self) -> &'a [u8] {
-        self.slice
-    }
-
-    /// Protocol version number (6.2.1)
-    pub fn version(&self) -> u8 {
-        self.slice[0]
-    }
-
-    /// Read the priority from the Network Layer Protocol Control Information (6.2.2)
-    pub fn priority(&self) -> NPDUPriority {
-        let prio: u8 = self.slice[1] & 0b0000_0011;
-        NPDUPriority::from_u8(prio).unwrap()
-    }
-
-    pub fn has_apdu(&self) -> bool {
-        (self.slice[1] & 0b1000_0000) == 0
-    }
-
-    pub fn has_destination_specifier(&self) -> bool {
-        (self.slice[1] & 0b0010_0000) != 0
-    }
-
-    pub fn has_source_specifier(&self) -> bool {
-        (self.slice[1] & 0b0000_1000) != 0
-    }
-
-    pub fn data_expecting_reply(&self) -> bool {
-        (self.slice[1] & 0b0000_0100) != 0
-    }
-
-    pub fn destination(&self) -> Result<DestSlice, String> {
-        let offset = 2;
-        if self.has_destination_specifier() {
-            DestSlice::from_slice(&self.slice[offset..])
-        } else {
-            Err("Destination not present".into())
-        }
-    }
-
-    pub fn source(&self) -> Result<SourceSlice, String> {
-        let offset = 2 + self.destination().and_then(|d| Ok(d.len())).unwrap_or(0);
-        if self.has_source_specifier() {
-            SourceSlice::from_slice(&self.slice[offset..])
-        } else {
-            Err("Source not present".into())
-        }
-    }
-
-    fn apdu_offset(&self) -> usize {
-        let mut offset: usize = 2;
-        offset += self.destination().and_then(|d| Ok(d.len())).unwrap_or(0);
-        offset += self.source().and_then(|s| Ok(s.len())).unwrap_or(0);
-        trace!("APDU Offset: {}", offset);
-        offset
-    }
-
-    pub fn apdu(&self) -> Result<APDUSlice, String> {
-        // TODO: Calculate proper offset and length
-        // TODO: Destination specified
-        // TODO: Source specifier
-
-        if self.has_apdu() {
-            APDUSlice::from_slice(&self.slice[self.apdu_offset()..])
-        } else {
-            Err("APDU not present".into())
-        }
-    }
-
-    pub fn content(&self) -> Result<NPDUContentSlice, String> {
-        if self.has_apdu() {
-            Ok(NPDUContentSlice::APDU(APDUSlice::from_slice(
-                &self.slice[self.apdu_offset()..],
-            )?))
-        } else {
-            Ok(NPDUContentSlice::Message(NPDUMessage::try_from(
-                self.slice[0],
-            )?))
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Dest {
+pub struct NPDUDest {
     net: u16,
     adr: Vec<u8>,
     hops: u8,
 }
 
-impl Dest {
+impl NPDUDest {
     pub fn new(net: u16, capacity: usize) -> Self {
-        Dest {
+        NPDUDest {
             net,
             adr: Vec::with_capacity(capacity),
             hops: 255,
@@ -255,14 +102,14 @@ impl Dest {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
-pub struct Source {
+pub struct NPDUSource {
     net: u16,
     adr: Vec<u8>,
 }
 
-impl Source {
+impl NPDUSource {
     pub fn new(net: u16, capacity: usize) -> Self {
-        Source {
+        NPDUSource {
             net,
             adr: Vec::with_capacity(capacity),
         }
@@ -301,8 +148,8 @@ impl<A: Encode, B: Encode> Encode for NPDUContent<A, B> {
 pub struct NPDU<A: Encode = APDU, B: Encode = NPDUMessage> {
     /// Protocol Version Number (6.2.1)
     pub version: u8,
-    pub destination: Option<Dest>,
-    pub source: Option<Source>,
+    pub destination: Option<NPDUDest>,
+    pub source: Option<NPDUSource>,
     pub data_expecting_reply: bool,
     pub priority: NPDUPriority,
     pub content: NPDUContent<A, B>,
@@ -311,8 +158,8 @@ pub struct NPDU<A: Encode = APDU, B: Encode = NPDUMessage> {
 impl<A: Encode, B: Encode> NPDU<A, B> {
     pub fn new<T: Into<NPDUContent<A, B>>>(
         content: T,
-        destination: Option<Dest>,
-        source: Option<Source>,
+        destination: Option<NPDUDest>,
+        source: Option<NPDUSource>,
         priority: NPDUPriority,
     ) -> Self {
         NPDU {
@@ -388,7 +235,7 @@ impl Decode for NPDU {
     fn decode<T: std::io::Read + Sized>(reader: &mut T) -> std::io::Result<Self> {
         let version = reader.read_u8()?;
         trace!("Version: {:02x}", version);
-        /// Read and parse the Network Layer Protocol Control Information (6.2.2)
+        // Read and parse the Network Layer Protocol Control Information (6.2.2)
         let control = reader.read_u8()?;
         trace!("Control: {:08b}", control);
         let priority = NPDUPriority::from_u8(control & 0b0000_00011).unwrap();
@@ -397,20 +244,20 @@ impl Decode for NPDU {
         let has_source = (control & 1 << 3) != 0;
         let data_expecting_reply = (control & 1 << 2) != 0;
 
-        let mut destination: Option<Dest> = if has_dest {
+        let mut destination: Option<NPDUDest> = if has_dest {
             let net = reader.read_u16::<BigEndian>()?;
             let len = reader.read_u8()?;
-            let mut dest = Dest::new(net, len as usize);
+            let mut dest = NPDUDest::new(net, len as usize);
             reader.read_exact(&mut dest.adr)?;
             Some(dest)
         } else {
             None
         };
 
-        let mut source: Option<Source> = if has_source {
+        let source: Option<NPDUSource> = if has_source {
             let net = reader.read_u16::<BigEndian>()?;
             let len = reader.read_u8()?;
-            let mut source = Source::new(net, len as usize);
+            let mut source = NPDUSource::new(net, len as usize);
             reader.read_exact(&mut source.adr)?;
             Some(source)
         } else {
@@ -446,7 +293,6 @@ mod tests {
     use super::*;
     use crate::{Decode, Encode};
     use bytes::{BufMut, BytesMut};
-    use hex;
 
     use crate::tests::*;
 
@@ -463,7 +309,7 @@ mod tests {
     #[test]
     fn test_encode_npdu_with_dest() {
         let content = NPDUContent::<Dummy, Dummy>::APDU(Dummy::default());
-        let dest = Dest {
+        let dest = NPDUDest {
             net: 0x126,
             adr: vec![0; 16],
             hops: 255,
@@ -481,7 +327,7 @@ mod tests {
     #[test]
     fn test_encode_npdu_with_source() {
         let content = NPDUContent::<Dummy, Dummy>::APDU(Dummy::default());
-        let source = Source {
+        let source = NPDUSource {
             net: 0x126,
             adr: vec![0; 16],
         };
@@ -498,12 +344,12 @@ mod tests {
     #[test]
     fn test_encode_npdu_with_dest_and_source() {
         let content = NPDUContent::<Dummy, Dummy>::APDU(Dummy::default());
-        let dest = Dest {
+        let dest = NPDUDest {
             net: 0x126,
             adr: vec![0; 16],
             hops: 255,
         };
-        let source = Source {
+        let source = NPDUSource {
             net: 0x126,
             adr: vec![0; 16],
         };
