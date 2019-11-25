@@ -1,4 +1,4 @@
-# Rust BACNet stack
+# Rust BACnet stack
 
 > **This is currently in a very early development phase. It's intended to work as a walking skeleton and evolve in a complete BACnet implementation**
 
