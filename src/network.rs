@@ -6,6 +6,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use std::convert::TryFrom;
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use bytes::BufMut;
 
 use tracing::trace;
 

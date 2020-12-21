@@ -3,6 +3,7 @@ use crate::network::*;
 use crate::{Decode, Encode};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use bytes::BufMut;
 
 const BACNETIP: u8 = 0x81;
 
