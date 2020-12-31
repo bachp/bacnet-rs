@@ -132,6 +132,8 @@ dependencies = [
  "hex",
  "num-derive",
  "num-traits",
+ "picky-asn1-der",
+ "serde",
  "tracing",
  "tracing-subscriber",
 ]
@@ -450,6 +452,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oid"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "293d5f18898078ea69ba1c84f3688d1f2b6744df8211da36197153157cee7055"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -460,6 +471,28 @@ name = "parking"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
+
+[[package]]
+name = "picky-asn1"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0718a593406db1ad8be482278f79215a0901e978925462159d8598cacb004ea"
+dependencies = [
+ "oid",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
+name = "picky-asn1-der"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "233e556fc14cd42f38290ecd53f23a9fe047df2837d3d7494d27872b40a64bca"
+dependencies = [
+ "picky-asn1",
+ "serde",
+ "serde_bytes",
+]
 
 [[package]]
 name = "pin-project-lite"
@@ -572,6 +605,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c64263859d87aa2eb554587e2d23183398d617427327cf2b3d0ed8c69e4800"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

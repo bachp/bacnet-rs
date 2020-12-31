@@ -46,4 +46,15 @@ mod tests {
             Ok(Self {})
         }
     }
+
+    /*#[test]
+    fn test_asn1_decode() {
+        use serde::{Serialize, Deserialize};
+        use std::option::Option;
+
+        let plain = Option::None;
+        let serialized = picky_asn1_der::to_vec(&plain).unwrap();
+        println!("{:?}", serialized);
+        //let deserialized: Option::None = picky_asn1_der::from_bytes(&serialized).unwrap();
+    }*/
 }
