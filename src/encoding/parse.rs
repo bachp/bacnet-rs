@@ -152,6 +152,7 @@ mod tests {
     use std::matches;
 
     #[test]
+    /// ASN.1 = NULL
     fn test_parse_application_tag_null() {
         let input: &[u8] = &[0b0000_0_000];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -164,6 +165,21 @@ mod tests {
     }
 
     #[test]
+    /// ASN.1 = [3] NULL
+    fn test_parse_context_tag_3_null() {
+        let input: &[u8] = &[0x38];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(3))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(0)));
+        assert!(tag.data.is_empty());
+    }
+
+    #[test]
+    /// ASN.1 = BOOLEAN
+    /// Value = FALSE
     fn test_parse_application_tag_boolean_false() {
         let input: &[u8] = &[0b0001_0_000];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -176,6 +192,8 @@ mod tests {
     }
 
     #[test]
+    /// ASN.1 = BOOLEAN
+    /// Value = TRUE
     fn test_parse_application_tag_boolean_true() {
         let input: &[u8] = &[0b0001_0_001];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -188,30 +206,64 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_context_tag_boolean_false() {
-        let input: &[u8] = &[0b0001_1_001, 0b0000_0000];
+    /// ASN.1 = [2] BOOLEAN
+    /// Value = FALSE
+    fn test_parse_context_tag_2_boolean_false() {
+        let input: &[u8] = &[0x29, 0x00];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
         assert!(matches!(
             tag.tag_number,
-            TagNumber::Context(ContextTag::Other(1))
+            TagNumber::Context(ContextTag::Other(2))
         ));
         assert!(matches!(tag.lvt, LengthValueType::Length(1)));
         assert_eq!(tag.data, &[0b0000_0000]);
     }
 
     #[test]
-    fn test_parse_context_tag_boolean_true() {
-        let input: &[u8] = &[0b0001_1_001, 0b0000_0001];
+    /// ASN.1 = [2] BOOLEAN
+    /// Value = TRUE
+    fn test_parse_context_tag_2_boolean_true() {
+        let input: &[u8] = &[0x29, 0x01];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
         assert!(matches!(
             tag.tag_number,
-            TagNumber::Context(ContextTag::Other(1))
+            TagNumber::Context(ContextTag::Other(2))
         ));
         assert!(matches!(tag.lvt, LengthValueType::Length(1)));
         assert_eq!(tag.data, &[0b0000_0001]);
     }
 
     #[test]
+    /// ASN.1 = [6] BOOLEAN
+    /// Value = FALSE
+    fn test_parse_context_tag_6_boolean_false() {
+        let input: &[u8] = &[0x69, 0x00];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(6))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(1)));
+        assert_eq!(tag.data, &[0b0000_0000]);
+    }
+
+    #[test]
+    /// ASN.1 = [27] BOOLEAN
+    /// Value = FALSE
+    fn test_parse_context_tag_27_boolean_false() {
+        let input: &[u8] = &[0xF9, 0x1b, 0x00];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(27))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(1)));
+        assert_eq!(tag.data, &[0b0000_0000]);
+    }
+
+    #[test]
+    /// ASN.1 = Unsigned
+    /// Value = 72
     fn test_parse_application_tag_unsigned_integer_72() {
         let input: &[u8] = &[0x21, 0x48];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -224,6 +276,22 @@ mod tests {
     }
 
     #[test]
+    /// ASN.1 = [0] Unsigned
+    /// Value = 256
+    fn test_parse_context_tag_0_unsigned_integer_256() {
+        let input: &[u8] = &[0x0A, 0x01, 0x00];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(0))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(2)));
+        assert_eq!(tag.data, &[0x01, 0x00]);
+    }
+
+    #[test]
+    /// ASN.1 = INTEGER
+    /// Value = 72
     fn test_parse_application_tag_signed_integer_72() {
         let input: &[u8] = &[0x31, 0x48];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -235,7 +303,38 @@ mod tests {
         assert_eq!(tag.data, &[72]);
     }
 
+
     #[test]
+    /// ASN.1 = [5] INTEGER
+    /// Value = -72
+    fn test_parse_context_tag_5_signed_integer_72() {
+        let input: &[u8] = &[0x59, 0xB8];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(5))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(1)));
+        assert_eq!(tag.data, &[0xB8]);
+    }
+
+    #[test]
+    /// ASN.1 = [33] INTEGER
+    /// Value = -72
+    fn test_parse_context_tag_33_signed_integer_72() {
+        let input: &[u8] = &[0xF9, 0x21, 0xB8];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(33))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(1)));
+        assert_eq!(tag.data, &[0xB8]);
+    }
+
+    #[test]
+    /// ASN.1 = REAL
+    /// Value = 72.0
     fn test_parse_application_tag_real_72_0() {
         let input: &[u8] = &[0x44, 0x42, 0x90, 0x00, 0x00];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -248,6 +347,22 @@ mod tests {
     }
 
     #[test]
+    /// ASN.1 = [0] REAL
+    /// Value = -33.3
+    fn test_parse_context_tag_0_real_33_3() {
+        let input: &[u8] = &[0x0C, 0xC2, 0x05, 0x33, 0x33];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(0))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(4)));
+        assert_eq!(tag.data, &[0xC2, 0x05, 0x33, 0x33]);
+    }
+
+    #[test]
+    /// ASN.1 = Double
+    /// Value = 72.0
     fn test_parse_application_tag_double_72_0() {
         let input: &[u8] = &[0x55, 0x08, 0x40, 0x52, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -260,6 +375,36 @@ mod tests {
     }
 
     #[test]
+    /// ASN.1 = [1] Double
+    /// Value = -33.3
+    fn test_parse_context_tag_1_double_33_3() {
+        let input: &[u8] = &[0x1D, 0x08, 0xC0, 0x40, 0xA6, 0x66, 0x66, 0x66, 0x66, 0x66];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(1))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(8)));
+        assert_eq!(tag.data, &[0xC0, 0x40, 0xA6, 0x66, 0x66, 0x66, 0x66, 0x66]);
+    }
+
+    #[test]
+    /// ASN.1 = [85] Double
+    /// Value = -33.3
+    fn test_parse_context_tag_85_double_33_3() {
+        let input: &[u8] = &[0xFD, 0x55, 0x08, 0xC0, 0x40, 0xA6, 0x66, 0x66, 0x66, 0x66, 0x66];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(85))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(8)));
+        assert_eq!(tag.data, &[0xC0, 0x40, 0xA6, 0x66, 0x66, 0x66, 0x66, 0x66]);
+    }
+
+    #[test]
+    /// ASN.1 = OCTET STRING
+    /// Value = X'1234FF'
     fn test_parse_application_tag_octet_string_example() {
         let input: &[u8] = &[0x63, 0x12, 0x34, 0xFF];
         let (_, tag) = parse_bacnet_tag(input).unwrap();
@@ -269,6 +414,20 @@ mod tests {
         ));
         assert!(matches!(tag.lvt, LengthValueType::Length(3)));
         assert_eq!(tag.data, &[0x12, 0x34, 0xFF]);
+    }
+
+    #[test]
+    /// ASN.1 = [1] OCTET STRING
+    /// Value = X'4321'
+    fn test_parse_context_tag_1_octet_string_example() {
+        let input: &[u8] = &[0x1A, 0x43, 0x21];
+        let (_, tag) = parse_bacnet_tag(input).unwrap();
+        assert!(matches!(
+            tag.tag_number,
+            TagNumber::Context(ContextTag::Other(1))
+        ));
+        assert!(matches!(tag.lvt, LengthValueType::Length(2)));
+        assert_eq!(tag.data, &[0x43, 0x21]);
     }
 
     #[test]

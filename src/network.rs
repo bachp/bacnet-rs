@@ -69,6 +69,7 @@ impl TryFrom<u8> for NPDUMessage {
     fn try_from(v: u8) -> Result<Self, Self::Error> {
         match v {
             0x00 => Ok(Self::WhoIsRouterToNetwork),
+            // TODO: Implement rest
             v if (v >= 0x80 && v <= 0xFF) => Ok(Self::Proprietary(v)),
             v => Err(format!("Unknown Message type: {}", v)),
         }
